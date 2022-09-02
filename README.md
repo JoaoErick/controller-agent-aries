@@ -2,6 +2,8 @@
 
 O `controller-agent-aries` é o projeto responsável por fazer a intermediação entre o soft-iot-base e o _Aries Agent_ (aca-py). Ele é capaz de publicar/assinar em tópicos para se comunicar com bundle [soft-iot-dlt-client-hyperledger-aries](https://github.com/JoaoErick/soft-iot-dlt-client-hyperledger-aries) e enviar requisições HTTP para o [_Aries Agent_ (aca-py)](https://github.com/hyperledger/aries-cloudagent-python).
 
+<a name="readme-top"></a>
+
 ## Modelo da arquitetura
 
 <p align="center">
@@ -38,3 +40,31 @@ O `controller-agent-aries` é o projeto responsável por fazer a intermediação
 | ACCEPT_INVITATION_RES       | Envia a confirmação de que a conexão entre agentes foi estabelecida |
 
 ---
+
+## Execução utilizando Docker
+
+### Pré-requisitos
+
+Antes de executar o projeto, é necessário a instalação das dependências abaixo:
+* [Docker](https://www.docker.com)
+* [Apache Maven](https://maven.apache.org/install.html)
+
+### Tutorial básico
+
+1. Clone este projeto [controller-agent-aries](https://github.com/JoaoErick/controller-agent-aries)
+2. No diretório raiz do projeto, abra o terminal
+3. Faça a compilação do projeto com o comando:
+   ```sh
+   mvn clean compile assembly:single
+   ```
+4. Inicie o `Docker` em seu computador
+ 
+5. Ainda no terminal, construa a imagem docker deste projeto com:
+   ```sh
+   docker build -t <nome-imagem> .
+   ```
+6. Crie um container a partir da imagem criada com:
+   ```sh
+   docker run -it <nome-imagem>
+   ```
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
