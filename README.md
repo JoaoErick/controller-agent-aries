@@ -14,9 +14,9 @@ O `controller-agent-aries` é o projeto responsável por fazer a intermediação
 
 | Funções                | Descrição                                        |
 | ---------------------- | ------------------------------------------------ |
-| getAriesClient()       | Obtém uma instância do Aries Cloud Agent         |
-| credentialDefinition() | Criação e envio de uma definição de credencial para o ledger |
-| createInvitation() | Recebe uma URL de conexão |
+| getAriesClient()       | Solicita uma instância do Aries Cloud Agent         |
+| credentialDefinition() | Solicita a criação e envio de uma definição de credencial para o __ledger__ |
+| createInvitation() | Solicita a geração de uma URL de conexão |
 | receiveInvitation() | Solicita a conexão entre agentes a partir da URL recebida |
 | issueCredentialV1() | Solicita o envio de uma credencial v1.0 para um agente |
 
