@@ -63,8 +63,8 @@ Antes de executar o projeto, é necessário a instalação das dependências aba
    ```sh
    docker build -t <nome-imagem> .
    ```
-6. Crie um container a partir da imagem criada com:
+6. Crie um container e execute-o a partir da imagem criada com:
    ```sh
    docker run -it <nome-imagem>
    ```
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<p align="right">(<a href="#readme-top">Voltar ao topo</a>)</p>
