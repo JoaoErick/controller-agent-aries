@@ -6,16 +6,19 @@ import com.google.gson.JsonObject;
 
 import br.uefs.larsid.dlt.iot.soft.mqtt.Listener;
 import br.uefs.larsid.dlt.iot.soft.mqtt.MQTTClient;
+import br.uefs.larsid.dlt.iot.soft.utils.CLI;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Scanner;
 
 import org.hyperledger.aries.AriesClient;
@@ -56,9 +59,8 @@ import org.hyperledger.aries.api.schema.SchemasCreatedFilter;
  */
 public class AriesAgent {
 
+    private static final String SCHEMA_ID = "WRSprCn3VTQU5ssmQJQajH:2:soft-iot-gateway:1.0";
     private static final boolean DEBUG_MODE = true;
-
-    private static final String END_POINT = "https://87b0-177-85-68-223.sa.ngrok.io";
 
     /* -------------------------- Topic constants ---------------------------- */
     private static final String CREATE_INVITATION = "POST CREATE_INVITATION";
@@ -68,26 +70,31 @@ public class AriesAgent {
     /* ---------------------------------------------------------------------- */
 
     /* -------------------------- MQTT constants ---------------------------- */
-    private static final String MQTT_IP = "172.17.0.6";
-    private static final String MQTT_PORT = "1883";
-    private static final String MQTT_USER = "karaf";
-    private static final String MQTT_PASS = "karaf";
     private static final int MQTT_QOS = 1;
     /* ---------------------------------------------------------------------- */
 
-    private static final String CREDENTIAL_DEFINITION_ID = "WRSprCn3VTQU5ssmQJQajH:3:CL:53944:Agent_Three";
-    private static final String SCHEMA_ID = "WRSprCn3VTQU5ssmQJQajH:2:soft-iot-gateway:1.0";
+    /* ---------------------- Controller properties ------------------------- */
+    private static String endpoint;
+    private static String credentialDefinitionId;
+    private static String brokerIp;
+    private static String brokerPort;
+    private static String brokerUsername;
+    private static String brokerPassword;
+    private static String agentIp;
+    private static String agentPort;
+    /* ---------------------------------------------------------------------- */
 
     private static AriesClient ac;
     private static String did;
     private static String presentationId;
-    private static MQTTClient mqttClient = new MQTTClient(DEBUG_MODE, MQTT_IP, MQTT_PORT, MQTT_USER, MQTT_PASS);
+    private static MQTTClient mqttClient;
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        final String AGENT_ADDR = "172.17.0.5";
-        final String AGENT_PORT = "8022";
+        readProperties(args);
 
-        // mqttClient.connect();
+        mqttClient = new MQTTClient(DEBUG_MODE, brokerIp, brokerPort, brokerUsername, brokerPassword);
+
+        mqttClient.connect();
 
         String[] topics = {
                 CREATE_INVITATION,
@@ -96,15 +103,13 @@ public class AriesAgent {
                 ISSUE_CREDENTIAL
         };
 
-        // new Listener(
-        //         mqttClient,
-        //         topics,
-        //         MQTT_QOS,
-        //         DEBUG_MODE);
+        new Listener(
+                mqttClient,
+                topics,
+                MQTT_QOS,
+                DEBUG_MODE);
 
-        readConfigs();
-
-        AriesClient ac = getAriesClient(AGENT_ADDR, AGENT_PORT);
+        AriesClient ac = getAriesClient(agentIp, agentPort);
 
         did = ac.walletDidPublic().get().getDid(); // Did publico
         presentationId = null;
@@ -112,28 +117,42 @@ public class AriesAgent {
         printlnDebug(">> Controller Aries Agent is running...");
     }
 
-    public static String readConfigs()
-            throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader("config.txt"));
-        String currentLine = reader.readLine();
-        if (currentLine.isEmpty()) {
-            writeConfig("CREDENTIAL_DEFINITION_ID", "");
-            currentLine = reader.readLine().split("=")[1];
-        } else {
-            currentLine = currentLine.split("=")[1];
-        }
-        reader.close();
-        printlnDebug(">> CREDENTIAL_DEFINITION_ID=" + currentLine);
-        return currentLine;
-    }
+    public static void readProperties(String[] args) {
+        try (InputStream input = AriesAgent.class.getResourceAsStream("controller.properties")) {
+            if (input == null) {
+                printlnDebug("Sorry, unable to find controller.properties.");
+                return;
+            }
+            Properties props = new Properties();
+            props.load(input);
 
-    public static void writeConfig(String key, String... value)
-            throws IOException {
-        FileWriter fileWriter = new FileWriter("config.txt");
-        PrintWriter printWriter = new PrintWriter(fileWriter);
-         
-        printWriter.printf("CREDENTIAL_DEFINITION_ID=%s", value.length > 0 ? value : "");
-        printWriter.close();
+            endpoint = CLI.getEndpoint(args)
+                    .orElse(props.getProperty("endpoint"));
+
+            credentialDefinitionId = CLI.getCredentialDefinitionId(args)
+                    .orElse(props.getProperty("credentialDefinitionId"));
+
+            brokerIp = CLI.getBrokerIp(args)
+                    .orElse(props.getProperty("brokerIp"));
+
+            brokerPort = CLI.getBrokerPort(args)
+                    .orElse(props.getProperty("brokerPort"));
+
+            brokerPassword = CLI.getBrokerPassword(args)
+                    .orElse(props.getProperty("brokerPassword"));
+
+            brokerUsername = CLI.getBrokerUsername(args)
+                    .orElse(props.getProperty("brokerUsername"));
+
+            agentIp = CLI.getAgentIp(args)
+                    .orElse(props.getProperty("agentIp"));
+
+            agentPort = CLI.getAgentPort(args)
+                    .orElse(props.getProperty("agentPort"));
+
+        } catch (IOException ex) {
+            printlnDebug("Sorry, unable to find sensors.json or not create pesistence file.");
+        }
     }
 
     // Obtem uma instância do Aries Cloud Agent
@@ -151,7 +170,7 @@ public class AriesAgent {
 
     // Gera um invitation url para conexão
     public static String createInvitation(String nodeUri) throws IOException {
-        return createInvitation(ac, END_POINT, nodeUri);
+        return createInvitation(ac, endpoint, nodeUri);
     }
 
     // Gera um invitation url para conexão
@@ -247,17 +266,10 @@ public class AriesAgent {
     // Envia uma definição de credencial para o ledger (blockchain), nesse caso
     // utiliza a schema estático criado no método acima ( createSchema() )
     public static String credentialDefinition(AriesClient ac) throws IOException {
-        CredentialDefinitionFilter filter = CredentialDefinitionFilter.builder().issuerDid(did)
-                .schemaName("soft-iot-gateway").build();
-        Optional<CredentialDefinition.CredentialDefinitionsCreated> credentialDefinitions = ac
-                .credentialDefinitionsCreated(filter);
-        List<String> credentialDefinitionsIds = credentialDefinitions.get().getCredentialDefinitionIds();
-        String credentialDefinitionId;
+        Optional<CredentialDefinition> credentialDefinition =
+        ac.credentialDefinitionsGetById(credentialDefinitionId);
 
-        // Optional<CredentialDefinition> credentialDefinition = ac.credentialDefinitionsGetById(CREDENTIAL_DEFINITION_ID);
-
-        // if (credentialDefinition.isEmpty()) {
-        if (readConfigs().isEmpty()) {
+        if (credentialDefinition.isEmpty()) {
             printlnDebug(">> Empty ");
             Optional<SchemaSendResponse> schema = createSchema(ac);
 
@@ -270,11 +282,21 @@ public class AriesAgent {
             printlnDebug(response.get().toString());
 
             credentialDefinitionId = response.get().getCredentialDefinitionId();
-            writeConfig("CREDENTIAL_DEFINITION_ID", credentialDefinitionId);
+
+            try (InputStream input = AriesAgent.class.getResourceAsStream("controller.properties")) {
+                if (input == null) {
+                    printlnDebug("Sorry, unable to find controller.properties.");
+                }
+                Properties props = new Properties();
+                props.load(input);
+
+                props.setProperty("credentialDefinitionId", credentialDefinitionId);
+
+            } catch (IOException e) {
+                printlnDebug("(!) Error changing a property");
+            }
         } else {
             printlnDebug(">> Credential Definition already exists!");
-            // credentialDefinitionId = credentialDefinition.get().getId();
-            credentialDefinitionId = readConfigs();
         }
 
         return credentialDefinitionId;
@@ -358,32 +380,14 @@ public class AriesAgent {
         String connectionId = jsonProperties.get("connectionId").getAsString();
         String value = jsonProperties.get("value").getAsString();
 
-        // CredentialDefinitionFilter filter = CredentialDefinitionFilter.builder().issuerDid(did)
-        //         .schemaName("soft-iot-gateway").build();
-        // Optional<CredentialDefinition.CredentialDefinitionsCreated> credentialDefinitions = ac
-        //         .credentialDefinitionsCreated(filter);
-        // List<String> credentialDefinitionIds = credentialDefinitions.get().getCredentialDefinitionIds();
-        String credentialDefinitionId;
-
-        // if (credentialDefinitionIds.isEmpty()) {
-        //     printlnDebug(">> Credential definitions unavailable in wallet! ");
-        //     Optional<CredentialDefinition> credentialDefinition = ac
-        //             .credentialDefinitionsGetById(CREDENTIAL_DEFINITION_ID);
-        //     credentialDefinitionId = credentialDefinition.get().getId();
-        // } else {
-        //     printlnDebug(">> credential definitions available in wallet! ");
-        //     credentialDefinitionId = credentialDefinitionIds.get(0);
-        // }
-
-        if (readConfigs().isEmpty()) {
+        if (credentialDefinitionId.isEmpty()) {
             printlnDebug(">> Credential Definition is not registered!");
         } else {
-            credentialDefinitionId = readConfigs();
             List<CredentialAttributes> attributes = new LinkedList<CredentialAttributes>();
             attributes.add(new CredentialAttributes("id", value));
-    
+
             CredentialPreview credPrev = new CredentialPreview(attributes);
-    
+
             Optional<V1CredentialExchange> response = ac.issueCredentialSend(
                     V1CredentialProposalRequest.builder()
                             .connectionId(connectionId)
@@ -394,7 +398,6 @@ public class AriesAgent {
 
             printlnDebug(response.get().toString());
         }
-
 
     }
 
