@@ -117,6 +117,12 @@ public class AriesAgent {
         printlnDebug(">> Controller Aries Agent is running...");
     }
 
+    /**
+     * Realiza leitura das propriedades passadas por parâmetro ou resgata 
+     * valores presentes no arquivo de propriedade. 
+     * 
+     * @param args String[] - Dados passados na execução do projeto.
+     */
     public static void readProperties(String[] args) {
         try (InputStream input = AriesAgent.class.getResourceAsStream("controller.properties")) {
             if (input == null) {
@@ -155,25 +161,36 @@ public class AriesAgent {
         }
     }
 
-    // Obtem uma instância do Aries Cloud Agent
+    /**
+     * Obtém uma instância do Aries Cloud Agent.
+     * 
+     * @param AGENT_ADDR String - Endereço IP do agente Aries.
+     * @param AGENT_PORT String - Porta do agente Aries
+     * @return AriesClient
+     */
     public static AriesClient getAriesClient(String AGENT_ADDR, String AGENT_PORT) throws IOException {
         if (ac == null) {
             ac = AriesClient.builder().url("http://" + AGENT_ADDR + ":" + AGENT_PORT).build(); // Public network
-                                                                                               // BuilderNetwork
-            // ac = AriesClient.builder().url("http://localhost:8001").build(); //Local
-            // network VonNetwork
         }
-        System.out.println(">> Agente Inicializado: " + ac.statusLive().get().isAlive());
-        System.out.println(">> Public DID Information: " + ac.walletDidPublic().get().getDid());
+
+        printlnDebug(">> Agente Inicializado: " + ac.statusLive().get().isAlive());
+        printlnDebug(">> Public DID Information: " + ac.walletDidPublic().get().getDid());
         return ac;
     }
 
-    // Gera um invitation url para conexão
+    /**
+     * Gera uma URL para que seja possível realizar a conexão com outros 
+     * agentes.
+     * 
+     * @param nodeUri String - Referência do edge gateway que se conectou com 
+     * o fog gateway.
+     * @return String - JSON contendo a URL de conexão, URI do edge gateway e 
+     * o Id da conexão.
+     */
     public static String createInvitation(String nodeUri) throws IOException {
         return createInvitation(ac, endpoint, nodeUri);
     }
 
-    // Gera um invitation url para conexão
     private static String createInvitation(AriesClient ac, String END_POINT, String nodeUri) throws IOException {
         Optional<CreateInvitationResponse> responseCI = ac.connectionsCreateInvitation(
                 CreateInvitationRequest.builder().myLabel("Agent_Three").serviceEndpoint(END_POINT).build());
@@ -187,7 +204,12 @@ public class AriesAgent {
                 "}";
     }
 
-    // Gera o schema de forma estática
+    /**
+     * Gera o schema de forma estática.
+     * 
+     * @param ac AriesClient - Instância do agente Aries.
+     * @return Optional<SchemaSendResponse> - Schema criado.
+     */
     public static Optional<SchemaSendResponse> createSchema(AriesClient ac) throws IOException {
         String schemaName = "soft-iot-gateway";
 
@@ -232,7 +254,11 @@ public class AriesAgent {
     // return response;
     // }
 
-    // Método para adicionar os atributos do schema
+    /**
+     * Adiciona atributos ao schema.
+     * 
+     * @return List<String> - Lista de atributos.
+     */
     public static List<String> attributesSchema() {
         List<String> attributes = new LinkedList<String>();
         attributes.add("id");
@@ -258,13 +284,15 @@ public class AriesAgent {
     // return attributes;
     // }
 
-    /* Cria uma definição de credencial */
+    /**
+     * Criação de uma definição de credencial.
+     * 
+     * @return String - Id da definição de credencial.
+     */
     public static String credentialDefinition() throws IOException {
         return credentialDefinition(ac);
     }
 
-    // Envia uma definição de credencial para o ledger (blockchain), nesse caso
-    // utiliza a schema estático criado no método acima ( createSchema() )
     public static String credentialDefinition(AriesClient ac) throws IOException {
         Optional<CredentialDefinition> credentialDefinition =
         ac.credentialDefinitionsGetById(credentialDefinitionId);
@@ -302,7 +330,12 @@ public class AriesAgent {
         return credentialDefinitionId;
     }
 
-    // Lista todos os schemas criados
+    /**
+     * Resgata um schema criado através da constante SCHEMA_ID.
+     * 
+     * @param ac AriesClient - Instância do agente Aries.
+     * @return String - Id do schema.
+     */
     public static String getSchema(AriesClient ac) throws IOException {
         Optional<SchemaSendResponse.Schema> response = ac.schemasGetById(SCHEMA_ID);
         if (!response.isEmpty()) {
@@ -311,16 +344,25 @@ public class AriesAgent {
         return null;
     }
 
-    // Lista todos os schemas criados
+    /**
+     * Resgata uma lista de schemas criados.
+     * 
+     * @param ac AriesClient - Instância do agente Aries.
+     * @return List<String> - Schemas.
+     */
     public static List<String> getSchemas(AriesClient ac) throws IOException {
         Optional<List<String>> schemas = ac.schemasCreated(SchemasCreatedFilter.builder().build());
         return schemas.get();
     }
 
-    // Lista todos os schemas criados
+    /**
+     * Exibe uma lista de schemas criados.
+     * 
+     * @param ac AriesClient - Instância do agente Aries.
+     */
     public static void showSchemas(AriesClient ac) throws IOException {
         Optional<List<String>> schemas = ac.schemasCreated(SchemasCreatedFilter.builder().build());
-        System.out.println(schemas.get().toString());
+        printlnDebug(schemas.get().toString());
     }
 
     // Lista um schema através do id informado (lista mais informações do id gerado)
