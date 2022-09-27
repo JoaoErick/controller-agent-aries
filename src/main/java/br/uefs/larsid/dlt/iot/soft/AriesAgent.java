@@ -55,7 +55,7 @@ import org.hyperledger.aries.api.schema.SchemasCreatedFilter;
 
 /**
  *
- * @author Emers
+ * @author João Erick Barbosa
  */
 public class AriesAgent {
 
@@ -475,16 +475,27 @@ public class AriesAgent {
     // System.out.println("\n" + response.get().toString());
     // }
 
-    // Solicita uma apresentação de credencial
-    public static String requestProofCredential(AriesClient ac, String did) throws IOException, InterruptedException {
-        String connectionId = getConnections(ac).get(0).getConnectionId();
-        String comment = "Prove que é aluno";
-        String nameOfProofRequest = "Prova de educação";
-        String nameOfAttrRequest = "nome";
+    /**
+     * Realiza uma requisição de prova de credencial para garantir que os edge 
+     * gateways têm permissão para trocar dados com fog gateway.
+     * 
+     * @param jsonProperties JsonObject - Propriedades recebidas pelo bundle.
+     */
+    public static void requestProofCredential(JsonObject jsonProperties) throws IOException, InterruptedException {
+        requestProofCredential(ac, jsonProperties, did);
+    }
+
+    public static String requestProofCredential(AriesClient ac, JsonObject jsonProperties, String did) throws IOException, InterruptedException {
+        String connectionId = jsonProperties.get("connectionId").getAsString();
+        String value = jsonProperties.get("value").getAsString();
+        
+        String comment = "Prove que pode enviar dados";
+        String nameOfProofRequest = "Permissão para enviar dados";
+        String nameOfAttrRequest = "id";
         String version = "1.0";
-        String valueOfAttrRequest = "nome";
+        String valueOfAttrRequest = value;
         String restrictionName = "cred_def_id";
-        String restrictionValue = getCredentialDefinition(did).get(0);
+        String restrictionValue = credentialDefinitionId;
 
         JsonObject restriction = new JsonObject();
         restriction.addProperty(restrictionName, restrictionValue);
@@ -497,8 +508,8 @@ public class AriesAgent {
         PresentProofRequest presentProofRequest = PresentProofRequest.builder().comment(comment)
                 .connectionId(connectionId).proofRequest(proofRequest).build();
 
-        System.out.println(presentProofRequest);
-        System.out.println(presentProofRequest.getProofRequest());
+        printlnDebug(presentProofRequest.toString());
+        printlnDebug(presentProofRequest.getProofRequest().toString());
         Optional<PresentationExchangeRecord> presentationExchangeRecord = ac
                 .presentProofSendRequest(presentProofRequest);
 
@@ -509,16 +520,63 @@ public class AriesAgent {
         do {
             pres = ac.presentProofRecordsGetById(presentationId);
             presentation = pres.get();
-            System.out.println("UpdateAt: " + presentation.getUpdatedAt());
-            System.out.println("Presentation: " + presentation.getPresentation());
-            System.out.println("Verificada: " + presentation.isVerified());
-            System.out.println("State: " + presentation.getState());
-            System.out.println("Auto Presentation: " + presentation.getAutoPresent());
+            printlnDebug("UpdateAt: " + presentation.getUpdatedAt());
+            printlnDebug("Presentation: " + presentation.getPresentation());
+            printlnDebug("Verificada: " + presentation.isVerified());
+            printlnDebug("State: " + presentation.getState());
+            printlnDebug("Auto Presentation: " + presentation.getAutoPresent());
             Thread.sleep(2 * 1000);
         } while (!presentation.getState().equals(PresentationExchangeState.PRESENTATION_RECEIVED));
 
         return presentationId;
     }
+
+    // public static String requestProofCredential(AriesClient ac, JsonObject jsonProperties, String did) throws IOException, InterruptedException {
+    //     String connectionId = jsonProperties.get("connectionId").getAsString();
+    //     String value = jsonProperties.get("value").getAsString();
+        
+    //     String connectionId = getConnections(ac).get(0).getConnectionId();
+    //     String comment = "Prove que é aluno";
+    //     String nameOfProofRequest = "Prova de educação";
+    //     String nameOfAttrRequest = "id";
+    //     String version = "1.0";
+    //     String valueOfAttrRequest = "nome";
+    //     String restrictionName = "cred_def_id";
+    //     String restrictionValue = getCredentialDefinition(did).get(0);
+
+    //     JsonObject restriction = new JsonObject();
+    //     restriction.addProperty(restrictionName, restrictionValue);
+    //     PresentProofRequest.ProofRequest.ProofRequestedAttributes requestedAttributeValue = PresentProofRequest.ProofRequest.ProofRequestedAttributes
+    //             .builder().restriction(restriction).name(valueOfAttrRequest).build();
+    //     PresentProofRequest.ProofRequest proofRequest = PresentProofRequest.ProofRequest.builder()
+    //             .requestedAttribute(nameOfAttrRequest, requestedAttributeValue).name(nameOfProofRequest)
+    //             .version(version).build();
+
+    //     PresentProofRequest presentProofRequest = PresentProofRequest.builder().comment(comment)
+    //             .connectionId(connectionId).proofRequest(proofRequest).build();
+
+    //     System.out.println(presentProofRequest);
+    //     System.out.println(presentProofRequest.getProofRequest());
+    //     Optional<PresentationExchangeRecord> presentationExchangeRecord = ac
+    //             .presentProofSendRequest(presentProofRequest);
+
+    //     Optional<PresentationExchangeRecord> pres;
+    //     String presentationId = presentationExchangeRecord.get().getPresentationExchangeId();
+    //     PresentationExchangeRecord presentation;
+
+    //     do {
+    //         pres = ac.presentProofRecordsGetById(presentationId);
+    //         presentation = pres.get();
+    //         System.out.println("UpdateAt: " + presentation.getUpdatedAt());
+    //         System.out.println("Presentation: " + presentation.getPresentation());
+    //         System.out.println("Verificada: " + presentation.isVerified());
+    //         System.out.println("State: " + presentation.getState());
+    //         System.out.println("Auto Presentation: " + presentation.getAutoPresent());
+    //         Thread.sleep(2 * 1000);
+    //     } while (!presentation.getState().equals(PresentationExchangeState.PRESENTATION_RECEIVED));
+
+    //     return presentationId;
+    // }
 
     // verificação da apresentação
     public static boolean verifyPresentation(AriesClient ac, String presentationId) throws IOException {

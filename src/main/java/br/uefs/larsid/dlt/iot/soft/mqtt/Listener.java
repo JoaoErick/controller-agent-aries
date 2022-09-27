@@ -19,6 +19,7 @@ public class Listener implements IMqttMessageListener {
   private static final String ACCEPT_INVITATION = "POST ACCEPT_INVITATION";
   private static final String CREDENTIAL_DEFINITIONS = "POST CREDENTIAL_DEFINITIONS";
   private static final String ISSUE_CREDENTIAL = "POST ISSUE_CREDENTIAL";
+  private static final String REQUEST_PROOF_CREDENTIAL = "POST REQUEST_PROOF_CREDENTIAL";
   /* ---------------------------------------------------------------------- */
 
   /*
@@ -28,6 +29,7 @@ public class Listener implements IMqttMessageListener {
   private static final String CREDENTIAL_DEFINITIONS_RES = "CREDENTIAL_DEFINITIONS_RES";
   private static final String ACCEPT_INVITATION_RES = "ACCEPT_INVITATION_RES";
   private static final String ISSUE_CREDENTIAL_RES = "ISSUE_CREDENTIAL_RES";
+  private static final String REQUEST_PROOF_CREDENTIAL_RES = "REQUEST_PROOF_CREDENTIAL_RES";
   /* ---------------------------------------------------------------------- */
 
   private boolean debugModeValue;
@@ -96,8 +98,17 @@ public class Listener implements IMqttMessageListener {
 
         break;
       case ISSUE_CREDENTIAL:
-        JsonObject jsonReceived = new Gson().fromJson(msg, JsonObject.class);
-        AriesAgent.issueCredentialV1(jsonReceived);
+        JsonObject jsonCredential = new Gson().fromJson(msg, JsonObject.class);
+        AriesAgent.issueCredentialV1(jsonCredential);
+
+        this.mqttClient.publish(ISSUE_CREDENTIAL_RES, "".getBytes(), QOS);
+
+        break;
+      case REQUEST_PROOF_CREDENTIAL:
+        JsonObject jsonRequestProof = new Gson().fromJson(msg, JsonObject.class);
+        AriesAgent.requestProofCredential(jsonRequestProof);
+
+        this.mqttClient.publish(REQUEST_PROOF_CREDENTIAL_RES, "".getBytes(), QOS);
 
         break;
       default:
